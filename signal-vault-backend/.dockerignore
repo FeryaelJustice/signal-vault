@@ -1,0 +1,33 @@
+# Build outputs
+build/
+out/
+target/
+bin/
+
+# Gradle caches (the Docker build resolves dependencies itself)
+.gradle/
+
+# IDE files
+.idea/
+*.iml
+.vscode/
+*.classpath
+*.project
+*.settings/
+
+# OS junk
+.DS_Store
+Thumbs.db
+
+# Version control
+.git/
+.gitignore
+.gitattributes
+
+# Docs and local notes (not needed in the image)
+README.md
+CLAUDE.md
+HELP.md
+
+# Logs
+*.log

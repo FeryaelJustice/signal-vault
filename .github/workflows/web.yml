@@ -1,0 +1,45 @@
+name: web
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "signal-vault-web/**"
+      - ".github/workflows/web.yml"
+  pull_request:
+    paths:
+      - "signal-vault-web/**"
+      - ".github/workflows/web.yml"
+
+defaults:
+  run:
+    working-directory: signal-vault-web
+
+jobs:
+  build-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Set up Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: pnpm
+          cache-dependency-path: signal-vault-web/pnpm-lock.yaml
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Unit tests
+        run: pnpm test
+
+      - name: Build
+        run: pnpm build

@@ -1,0 +1,47 @@
+name: android
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "signal-vault-android/**"
+      - ".github/workflows/android.yml"
+  pull_request:
+    paths:
+      - "signal-vault-android/**"
+      - ".github/workflows/android.yml"
+
+defaults:
+  run:
+    working-directory: signal-vault-android
+
+jobs:
+  build-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # The Android app is a skeleton in this pass; skip gracefully until the
+      # Gradle project exists so CI stays green on the monorepo.
+      - name: Detect Gradle project
+        id: detect
+        run: |
+          if [ -f ./gradlew ]; then echo "present=true" >> "$GITHUB_OUTPUT"; else echo "present=false" >> "$GITHUB_OUTPUT"; fi
+
+      - name: Set up JDK 21
+        if: steps.detect.outputs.present == 'true'
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: gradle
+
+      - name: Build & unit test
+        if: steps.detect.outputs.present == 'true'
+        run: |
+          chmod +x ./gradlew
+          ./gradlew --no-daemon testDebugUnitTest lintDebug assembleDebug
+
+      - name: Skeleton notice
+        if: steps.detect.outputs.present == 'false'
+        run: echo "signal-vault-android is a skeleton; no Gradle project yet. Skipping."

@@ -1,0 +1,62 @@
+# ──────────────────────────────────────────────────────────────
+# SignalVault monorepo .gitignore
+# ──────────────────────────────────────────────────────────────
+
+# OS / editor
+.DS_Store
+Thumbs.db
+*.swp
+*~
+.idea/
+.vscode/*
+!.vscode/extensions.json
+*.iml
+
+# Secrets / local env
+.env
+.env.local
+.env.*.local
+*.local.env
+secrets/
+*.pem
+*.p12
+*.keystore
+*.jks
+
+# ── Node / Next.js (signal-vault-web) ──
+node_modules/
+.next/
+out/
+.pnpm-store/
+npm-debug.log*
+pnpm-debug.log*
+coverage/
+playwright-report/
+test-results/
+.vitest/
+
+# ── Java / Gradle (signal-vault-backend) ──
+.gradle/
+build/
+!gradle/wrapper/gradle-wrapper.jar
+target/
+*.class
+*.log
+HELP.md
+
+# ── Android (signal-vault-android) ──
+*.apk
+*.aab
+local.properties
+captures/
+.cxx/
+
+# ── iOS (signal-vault-ios) ──
+xcuserdata/
+*.xcworkspace/xcuserdata/
+DerivedData/
+.swiftpm/
+Pods/
+
+# ── Docker ──
+*.pid
