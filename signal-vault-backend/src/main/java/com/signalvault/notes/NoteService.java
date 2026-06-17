@@ -22,16 +22,16 @@ public class NoteService {
     }
 
     @Transactional
-    public SecureNote create(UUID ownerId, String title, String encryptedContent) {
-        SecureNote note = SecureNote.create(ownerId, title, encryptedContent);
+    public SecureNote create(UUID ownerId, String title, String encryptedContent, boolean highSecurity) {
+        SecureNote note = SecureNote.create(ownerId, title, encryptedContent, highSecurity);
         return noteRepository.save(note);
     }
 
     @Transactional
-    public SecureNote update(UUID ownerId, UUID noteId, String title, String encryptedContent) {
+    public SecureNote update(UUID ownerId, UUID noteId, String title, String encryptedContent, boolean highSecurity) {
         SecureNote note = noteRepository.findByIdAndOwnerId(noteId, ownerId)
                 .orElseThrow(() -> new NotFoundException("Note not found"));
-        note.update(title, encryptedContent);
+        note.update(title, encryptedContent, highSecurity);
         return noteRepository.save(note);
     }
 

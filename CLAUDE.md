@@ -14,8 +14,8 @@ A multi-platform, security-focused product: a shared **Spring Boot** backend plu
 - **API contract is the source of truth**: [`docs/api.md`](docs/api.md). The backend
   implements it and publishes OpenAPI at `/v3/api-docs`; the web client regenerates its
   typed client from there. Change the contract deliberately and update all consumers.
-- **Zero-knowledge**: note `encryptedContent` and message `encryptedBody` are ciphertext
-  produced on the client. The backend must never see or log plaintext.
+- **Zero-knowledge**: note `encryptedContent`, room `encryptedRoomKey`, and message
+  `encryptedBody` are ciphertext produced on the client. The backend must never see or log plaintext.
 - **Secrets via env only.** Never commit JWT secrets or DB credentials.
 - **Stay in your app folder.** Cross-app changes go through the contract, not by editing
   another app's internals.

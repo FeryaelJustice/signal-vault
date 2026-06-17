@@ -6,20 +6,19 @@
 
 Android · iOS · Web, backed by a Spring Boot API.
 
-[![backend](https://github.com/OWNER/signal-vault/actions/workflows/backend.yml/badge.svg)](.github/workflows/backend.yml)
-[![web](https://github.com/OWNER/signal-vault/actions/workflows/web.yml/badge.svg)](.github/workflows/web.yml)
-[![android](https://github.com/OWNER/signal-vault/actions/workflows/android.yml/badge.svg)](.github/workflows/android.yml)
-[![ios](https://github.com/OWNER/signal-vault/actions/workflows/ios.yml/badge.svg)](.github/workflows/ios.yml)
+[![backend](https://github.com/FeryaelJustice/signal-vault/actions/workflows/backend.yml/badge.svg)](.github/workflows/backend.yml)
+[![web](https://github.com/FeryaelJustice/signal-vault/actions/workflows/web.yml/badge.svg)](.github/workflows/web.yml)
+[![android](https://github.com/FeryaelJustice/signal-vault/actions/workflows/android.yml/badge.svg)](.github/workflows/android.yml)
+[![ios](https://github.com/FeryaelJustice/signal-vault/actions/workflows/ios.yml/badge.svg)](.github/workflows/ios.yml)
 
 </div>
-
-> Replace `OWNER` in the badge URLs once the repo is pushed to GitHub.
 
 ## What it is
 
 SignalVault lets users protect sensitive notes behind a biometric/passphrase **vault** and
-exchange **realtime** private messages in secure rooms. Note and message content is
-**encrypted on the client** — the server only ever stores ciphertext (zero-knowledge).
+exchange **realtime** private messages in shared secure rooms. Notes, room keys, and
+message content are **encrypted on the client** — the server only ever stores ciphertext
+or per-member encrypted key envelopes (zero-knowledge).
 
 It is intentionally small, but every feature demonstrates a skill that shows up in strong
 engineering roles: native security, realtime resiliency, JWT auth, an enterprise backend,
@@ -49,7 +48,8 @@ signal-vault/
 See [`docs/architecture.md`](docs/architecture.md) for diagrams. In short: every client
 authenticates with a short-lived JWT (+ rotating refresh token), reads/writes
 client-encrypted notes over REST, and joins realtime rooms over STOMP/WebSocket. The
-backend never sees plaintext note or message content.
+backend never sees plaintext note or message content. Rooms support invites by email,
+member lists, online presence, leave permissions, and shared encrypted history.
 
 ## Quick start (backend + web)
 
@@ -98,13 +98,17 @@ encryption** so a database dump never reveals note/message plaintext.
 | Android | Kotlin, Compose, Clean Arch | [`signal-vault-android/README.md`](signal-vault-android/README.md) |
 | iOS | SwiftUI, Clean Arch | [`signal-vault-ios/README.md`](signal-vault-ios/README.md) |
 
+For end-user flows, see [`USER_MANUAL.md`](USER_MANUAL.md).
+
 ## Roadmap
 
 - [x] Monorepo scaffold, shared API contract, CI, docs
-- [ ] Backend: auth → notes → rooms/realtime
-- [ ] Web: auth → vault (Web Crypto) → realtime rooms
+- [x] Backend: auth → notes → shared rooms/realtime
+- [x] Web: auth → vault (Web Crypto) → shared realtime rooms
+- [x] Maximum security notes (per-note password, AES-GCM, zero-knowledge)
+- [x] Maximum security rooms — unanimous password proposal, audit history
 - [ ] Android & iOS clients (skeleton → full)
-- [ ] WebAuthn/passkey vault unlock on web; certificate pinning on mobile
+- [ ] WebAuthn/passkey vault unlock on web; room key rotation; certificate pinning on mobile
 - [ ] Demo video, screenshots, deploy (VPS / Railway / Fly / Render)
 
 ## License

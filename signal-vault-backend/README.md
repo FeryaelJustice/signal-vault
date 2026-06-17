@@ -2,9 +2,9 @@
 
 Secure notes and realtime private messages API for **SignalVault**.
 
-The server is **zero-knowledge for user content**: note bodies (`encryptedContent`) and message
-bodies (`encryptedBody`) are **client-side ciphertext**. The backend stores and relays them but
-never sees plaintext.
+The server is **zero-knowledge for user content**: note bodies (`encryptedContent`), room
+keys (`encryptedRoomKey`) and message bodies (`encryptedBody`) are **client-side
+ciphertext**. The backend stores and relays them but never sees plaintext.
 
 ## Stack
 
@@ -79,11 +79,21 @@ the whole token family for that user.
 
 ### Rooms & messages (Bearer)
 
-| Method | Path                       | Body / Notes |
-|--------|----------------------------|--------------|
-| GET    | `/api/rooms`               | `200 [Room...]` — the caller's rooms |
-| POST   | `/api/rooms`               | `{name}` → `201 Room` |
-| GET    | `/api/rooms/{id}/messages` | `200 [Message...]` recent (newest first); access enforced |
+| Method | Path | Body / Notes |
+|--------|------|--------------|
+| GET    | `/api/rooms` | `200 [Room...]` — rooms where the caller is a member |
+| POST   | `/api/rooms` | `{name, encryptedRoomKey}` → `201 Room` |
+| GET    | `/api/rooms/invites` | pending invites addressed to the caller's email |
+| POST   | `/api/rooms/invites/{id}/accept` | `{encryptedRoomKey}` → caller joins the room |
+| GET    | `/api/rooms/{id}/members` | members, roles and online state |
+| GET    | `/api/rooms/{id}/invites` | owner-visible invite list |
+| POST   | `/api/rooms/{id}/invites` | owner invites an existing user by email |
+| POST   | `/api/rooms/{id}/presence` | mark caller online in the room |
+| DELETE | `/api/rooms/{id}/membership` | non-owner member leaves |
+| GET    | `/api/rooms/{id}/messages` | `200 [Message...]` recent (newest first); membership enforced |
+
+Room messages are encrypted with a client-generated room key. The backend stores one
+encrypted copy of that room key per member.
 
 ### WebSocket (STOMP + SockJS)
 
@@ -160,7 +170,7 @@ docker run --rm -v "$PWD/signal-vault-backend":/app -w /app \
 com.signalvault
 ├── auth        # User, RefreshToken, AuthService, AuthController, MeController, dto/
 ├── notes       # SecureNote, NoteService, NoteController, dto/
-├── rooms       # Room, Message, RoomService, RoomController, dto/  (messages live here)
+├── rooms       # Room, RoomMember, RoomInvite, Message, RoomService, RoomController, dto/
 ├── security    # JwtService, JwtAuthenticationFilter, SecurityConfig, properties, principal
 ├── websocket   # WebSocketConfig, StompAuthChannelInterceptor, RoomMessageController
 └── common      # ApiError, GlobalExceptionHandler, exceptions, OpenApiConfig

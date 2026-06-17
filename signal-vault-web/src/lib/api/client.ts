@@ -5,12 +5,19 @@
 
 import type {
   AuthResponse,
+  CastVoteRequest,
+  CreateProposalRequest,
   RefreshResponse,
   Note,
   CreateNoteRequest,
   UpdateNoteRequest,
+  PasswordHistoryEntry,
+  PasswordProposal,
   Room,
   CreateRoomRequest,
+  UpdateRoomSecurityRequest,
+  RoomInvite,
+  RoomMember,
   Message,
   SendMessageRequest,
   User,
@@ -192,6 +199,48 @@ export async function apiCreateRoom(body: CreateRoomRequest): Promise<Room> {
   });
 }
 
+export async function apiGetRoomMembers(roomId: string): Promise<RoomMember[]> {
+  return apiFetch<RoomMember[]>(`/api/rooms/${roomId}/members`);
+}
+
+export async function apiInviteToRoom(
+  roomId: string,
+  email: string
+): Promise<RoomInvite> {
+  return apiFetch<RoomInvite>(`/api/rooms/${roomId}/invites`, {
+    method: "POST",
+    body: JSON.stringify({ email }),
+  });
+}
+
+export async function apiGetRoomInvites(roomId: string): Promise<RoomInvite[]> {
+  return apiFetch<RoomInvite[]>(`/api/rooms/${roomId}/invites`);
+}
+
+export async function apiGetPendingInvites(): Promise<RoomInvite[]> {
+  return apiFetch<RoomInvite[]>("/api/rooms/invites");
+}
+
+export async function apiAcceptInvite(
+  inviteId: string,
+  encryptedRoomKey: string
+): Promise<Room> {
+  return apiFetch<Room>(`/api/rooms/invites/${inviteId}/accept`, {
+    method: "POST",
+    body: JSON.stringify({ encryptedRoomKey }),
+  });
+}
+
+export async function apiTouchRoomPresence(roomId: string): Promise<void> {
+  return apiFetch<void>(`/api/rooms/${roomId}/presence`, { method: "POST" });
+}
+
+export async function apiLeaveRoom(roomId: string): Promise<void> {
+  return apiFetch<void>(`/api/rooms/${roomId}/membership`, {
+    method: "DELETE",
+  });
+}
+
 export async function apiGetMessages(roomId: string): Promise<Message[]> {
   return apiFetch<Message[]>(`/api/rooms/${roomId}/messages`);
 }
@@ -204,4 +253,52 @@ export async function apiSendMessage(
     method: "POST",
     body: JSON.stringify(body),
   });
+}
+
+// ── Room security ─────────────────────────────────────────────────────────────
+
+export async function apiUpdateRoomSecurity(
+  roomId: string,
+  body: UpdateRoomSecurityRequest
+): Promise<Room> {
+  return apiFetch<Room>(`/api/rooms/${roomId}/security`, {
+    method: "PATCH",
+    body: JSON.stringify(body),
+  });
+}
+
+export async function apiCreatePasswordProposal(
+  roomId: string,
+  body: CreateProposalRequest
+): Promise<PasswordProposal> {
+  return apiFetch<PasswordProposal>(`/api/rooms/${roomId}/password-proposals`, {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+}
+
+export async function apiGetPendingProposal(
+  roomId: string
+): Promise<PasswordProposal | null> {
+  const result = await apiFetch<PasswordProposal | undefined>(
+    `/api/rooms/${roomId}/password-proposals/pending`
+  );
+  return result ?? null;
+}
+
+export async function apiCastVote(
+  roomId: string,
+  proposalId: string,
+  body: CastVoteRequest
+): Promise<PasswordProposal> {
+  return apiFetch<PasswordProposal>(
+    `/api/rooms/${roomId}/password-proposals/${proposalId}/vote`,
+    { method: "POST", body: JSON.stringify(body) }
+  );
+}
+
+export async function apiGetPasswordHistory(
+  roomId: string
+): Promise<PasswordHistoryEntry[]> {
+  return apiFetch<PasswordHistoryEntry[]>(`/api/rooms/${roomId}/password-history`);
 }

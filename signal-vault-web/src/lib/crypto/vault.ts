@@ -93,6 +93,10 @@ function fromBase64(b64: string): Uint8Array<ArrayBuffer> {
   return buf;
 }
 
+function randomBase64(n: number): string {
+  return toBase64(randomBytes(n).buffer);
+}
+
 // ── Public API ────────────────────────────────────────────────────────────────
 
 /**
@@ -236,4 +240,39 @@ export async function decryptWithKey(
 /** Returns a random hex salt for initial vault setup */
 export function generateSalt(): string {
   return toHex(randomBytes(SALT_BYTES));
+}
+
+export function generateRoomKeyMaterial(): string {
+  return randomBase64(32);
+}
+
+const ROOM_PASSWORD_SENTINEL = "signalvault:room-password:v1";
+
+/** Creates an encrypted verifier for a room password (stored server-side, verified client-side). */
+export async function createRoomPasswordVerifier(password: string): Promise<string> {
+  return encryptString(ROOM_PASSWORD_SENTINEL, password);
+}
+
+/** Returns true if the password matches the stored verifier. */
+export async function verifyRoomPassword(
+  verifier: string,
+  password: string
+): Promise<boolean> {
+  try {
+    const plaintext = await decryptString(verifier, password);
+    return plaintext === ROOM_PASSWORD_SENTINEL;
+  } catch {
+    return false;
+  }
+}
+
+export async function importRoomKey(roomKeyMaterial: string): Promise<CryptoKey> {
+  const raw = fromBase64(roomKeyMaterial);
+  return crypto.subtle.importKey(
+    "raw",
+    raw,
+    { name: "AES-GCM", length: 256 },
+    false,
+    ["encrypt", "decrypt"]
+  );
 }

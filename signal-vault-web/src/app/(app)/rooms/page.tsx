@@ -5,9 +5,20 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { toast } from "sonner";
 
-import { apiGetRooms, apiCreateRoom } from "@/lib/api/client";
+import {
+  apiGetPendingInvites,
+  apiGetRooms,
+  apiCreateRoom,
+  apiCreatePasswordProposal,
+} from "@/lib/api/client";
 import type { Room } from "@/lib/api/contract";
 import { formatDistanceToNow } from "@/lib/utils/date";
+import { useVaultStore } from "@/lib/vault/vaultStore";
+import {
+  encryptWithKey,
+  generateRoomKeyMaterial,
+  createRoomPasswordVerifier,
+} from "@/lib/crypto/vault";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -20,30 +31,92 @@ import {
 
 export default function RoomsPage() {
   const qc = useQueryClient();
+  const { locked, vaultKey, saltHex } = useVaultStore();
   const [creating, setCreating] = useState(false);
   const [newName, setNewName] = useState("");
+  const [newHighSecurity, setNewHighSecurity] = useState(false);
+  const [roomPassword, setRoomPassword] = useState("");
+  const [confirmRoomPassword, setConfirmRoomPassword] = useState("");
 
   const { data: rooms, isLoading, error } = useQuery({
     queryKey: ["rooms"],
     queryFn: apiGetRooms,
   });
 
+  const { data: pendingInvites } = useQuery({
+    queryKey: ["room-invites", "pending"],
+    queryFn: apiGetPendingInvites,
+  });
+
   const createMutation = useMutation({
-    mutationFn: (name: string) => apiCreateRoom({ name }),
+    mutationFn: async ({ name, highSecurity, password }: {
+      name: string;
+      highSecurity: boolean;
+      password?: string;
+    }) => {
+      if (!vaultKey || !saltHex) throw new Error("Unlock your vault before creating a room");
+      const roomKeyMaterial = generateRoomKeyMaterial();
+      const encryptedRoomKey = await encryptWithKey(roomKeyMaterial, vaultKey, saltHex);
+      const room = await apiCreateRoom({ name, encryptedRoomKey, highSecurity });
+
+      // If high security with a password, immediately submit a proposal (auto-resolves since sole member).
+      if (highSecurity && password) {
+        const passwordVerifier = await createRoomPasswordVerifier(password);
+        await apiCreatePasswordProposal(room.id, {
+          proposedPassword: password,
+          passwordVerifier,
+        });
+      }
+
+      return room;
+    },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["rooms"] });
       toast.success("Room created");
       setCreating(false);
       setNewName("");
+      setNewHighSecurity(false);
+      setRoomPassword("");
+      setConfirmRoomPassword("");
     },
-    onError: () => toast.error("Failed to create room"),
+    onError: (err) =>
+      toast.error(err instanceof Error ? err.message : "Failed to create room"),
   });
 
   function handleCreate(e: React.FormEvent) {
     e.preventDefault();
     if (!newName.trim()) return;
-    createMutation.mutate(newName.trim());
+    if (locked) {
+      toast.error("Unlock your vault before creating a room");
+      return;
+    }
+    if (newHighSecurity) {
+      if (roomPassword.length < 8) {
+        toast.error("Room password must be at least 8 characters");
+        return;
+      }
+      if (roomPassword !== confirmRoomPassword) {
+        toast.error("Room passwords do not match");
+        return;
+      }
+    }
+    createMutation.mutate({
+      name: newName.trim(),
+      highSecurity: newHighSecurity,
+      password: newHighSecurity ? roomPassword : undefined,
+    });
   }
+
+  function handleDialogClose() {
+    setCreating(false);
+    setNewName("");
+    setNewHighSecurity(false);
+    setRoomPassword("");
+    setConfirmRoomPassword("");
+  }
+
+  const passwordMismatch =
+    newHighSecurity && roomPassword && confirmRoomPassword && roomPassword !== confirmRoomPassword;
 
   return (
     <div className="mx-auto max-w-2xl px-4 py-10">
@@ -54,11 +127,47 @@ export default function RoomsPage() {
             Encrypted realtime messaging channels
           </p>
         </div>
-        <Button variant="outline" size="sm" onClick={() => setCreating(true)}>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => setCreating(true)}
+          disabled={locked}
+          title={locked ? "Unlock your vault first" : undefined}
+        >
           <PlusIcon className="mr-1.5 h-3.5 w-3.5" />
           New room
         </Button>
       </div>
+
+      {locked && (
+        <div className="mb-4 rounded-lg border border-border/60 bg-card/60 p-3 text-sm text-muted-foreground">
+          Unlock your vault before creating rooms, accepting invites, or reading messages.
+        </div>
+      )}
+
+      {pendingInvites && pendingInvites.length > 0 && (
+        <div className="mb-6 rounded-lg border border-primary/30 bg-primary/10 p-4">
+          <h2 className="text-sm font-medium">Pending invites</h2>
+          <ul className="mt-3 space-y-2">
+            {pendingInvites.map((invite) => (
+              <li
+                key={invite.id}
+                className="flex items-center justify-between gap-3 text-sm"
+              >
+                <div>
+                  <p>{invite.roomName}</p>
+                  <p className="text-xs text-muted-foreground">
+                    Invited by {invite.inviterEmail}
+                  </p>
+                </div>
+                <span className="text-right text-xs text-muted-foreground">
+                  Use the invite link
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       {isLoading && (
         <div className="space-y-2">
@@ -105,9 +214,15 @@ export default function RoomsPage() {
                     <HashIcon className="h-4 w-4" />
                   </div>
                   <div>
-                    <p className="font-medium text-sm">{room.name}</p>
+                    <div className="flex items-center gap-2">
+                      <p className="font-medium text-sm">{room.name}</p>
+                      {room.highSecurity && (
+                        <ShieldIcon className="h-3.5 w-3.5 text-primary" title="High security" />
+                      )}
+                    </div>
                     <p className="text-xs text-muted-foreground">
-                      Created {formatDistanceToNow(room.createdAt)}
+                      {room.memberCount} member{room.memberCount === 1 ? "" : "s"} ·{" "}
+                      {room.onlineCount} online · Created {formatDistanceToNow(room.createdAt)}
                     </p>
                   </div>
                 </div>
@@ -119,8 +234,8 @@ export default function RoomsPage() {
       )}
 
       {/* Create room dialog */}
-      <Dialog open={creating} onOpenChange={(v) => !v && setCreating(false)}>
-        <DialogContent className="sm:max-w-xs">
+      <Dialog open={creating} onOpenChange={(v) => !v && handleDialogClose()}>
+        <DialogContent className="sm:max-w-sm">
           <DialogHeader>
             <DialogTitle>Create room</DialogTitle>
           </DialogHeader>
@@ -132,18 +247,83 @@ export default function RoomsPage() {
               autoFocus
               maxLength={64}
             />
+
+            {/* High security toggle */}
+            <div className="flex items-center justify-between rounded-lg border border-border/60 bg-card/40 px-3 py-2.5">
+              <div className="flex items-center gap-2">
+                <ShieldIcon className="h-4 w-4 text-primary" />
+                <div>
+                  <p className="text-xs font-medium">Maximum security</p>
+                  <p className="text-[10px] text-muted-foreground">
+                    Requires a shared room password
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={newHighSecurity}
+                onClick={() => {
+                  setNewHighSecurity(!newHighSecurity);
+                  setRoomPassword("");
+                  setConfirmRoomPassword("");
+                }}
+                className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
+                  newHighSecurity ? "bg-primary" : "bg-muted-foreground/30"
+                }`}
+              >
+                <span
+                  className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white transition-transform ${
+                    newHighSecurity ? "translate-x-4" : "translate-x-0.5"
+                  }`}
+                />
+              </button>
+            </div>
+
+            {newHighSecurity && (
+              <>
+                <div className="rounded-lg border border-destructive/40 bg-destructive/10 p-3 text-xs text-destructive">
+                  <strong>Remember this password.</strong> All members must enter it to access the room.
+                  Changing it requires unanimous agreement from all members.
+                </div>
+                <div className="space-y-2">
+                  <Input
+                    type="password"
+                    value={roomPassword}
+                    onChange={(e) => setRoomPassword(e.target.value)}
+                    placeholder="Room password (min. 8 chars)"
+                    autoComplete="new-password"
+                  />
+                  <Input
+                    type="password"
+                    value={confirmRoomPassword}
+                    onChange={(e) => setConfirmRoomPassword(e.target.value)}
+                    placeholder="Confirm room password"
+                    autoComplete="new-password"
+                  />
+                  {passwordMismatch && (
+                    <p className="text-xs text-destructive">Passwords do not match</p>
+                  )}
+                </div>
+              </>
+            )}
+
             <div className="flex justify-end gap-2">
               <Button
                 variant="ghost"
                 type="button"
-                onClick={() => setCreating(false)}
+                onClick={handleDialogClose}
                 disabled={createMutation.isPending}
               >
                 Cancel
               </Button>
               <Button
                 type="submit"
-                disabled={createMutation.isPending || !newName.trim()}
+                disabled={
+                  createMutation.isPending ||
+                  !newName.trim() ||
+                  (newHighSecurity && (roomPassword.length < 8 || roomPassword !== confirmRoomPassword))
+                }
               >
                 {createMutation.isPending ? "Creating…" : "Create"}
               </Button>
@@ -180,6 +360,15 @@ function ChevronIcon({ className }: { className?: string }) {
   return (
     <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
       <polyline points="9 18 15 12 9 6" />
+    </svg>
+  );
+}
+
+function ShieldIcon({ className, title }: { className?: string; title?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      {title && <title>{title}</title>}
+      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
     </svg>
   );
 }

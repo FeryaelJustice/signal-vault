@@ -6,7 +6,7 @@ Secure realtime notes and private messages built with Android, Jetpack Compose, 
 
 SignalVault is a portfolio project designed to prove Android security, realtime communication, and enterprise backend skills in one coherent product.
 
-The app lets users protect sensitive notes locally and share private realtime messages through secure rooms. It is intentionally small, but every feature exists to demonstrate a skill that appears in strong Android job offers.
+The app lets users protect sensitive notes locally and share private realtime messages through secure rooms. Rooms are shared spaces: an owner invites another registered user, members see who is present, and the shared message history stays encrypted on the client. It is intentionally small, but every feature exists to demonstrate a skill that appears in strong Android job offers.
 
 ## What This Project Demonstrates
 
@@ -27,8 +27,11 @@ Users can:
 - Create an account and log in.
 - Unlock the vault with biometrics.
 - Create encrypted local notes.
-- Join a private realtime room.
-- Send and receive secure messages.
+- Create a private realtime room.
+- Invite another registered user by email.
+- Share the room key through an invite link without sending the raw key to the backend.
+- See room members and online presence.
+- Send and receive secure messages with shared encrypted history.
 - Keep the app resilient when the WebSocket disconnects.
 
 ## Target Users
@@ -45,16 +48,18 @@ Users can:
 - JWT protected backend.
 - Biometric vault unlock.
 - Local encrypted notes.
-- One realtime room per user.
+- Shared realtime rooms with members and invites.
+- Per-room client-side keys wrapped by each member's vault key.
 - WebSocket connection state: connecting, connected, reconnecting, disconnected.
 - Backend Docker Compose with PostgreSQL.
 - Android and backend CI.
 
 ### Out Of Scope For MVP
 
-- End-to-end cryptography between users.
 - File attachments.
 - Push notifications.
+- Automatic key rotation after a member leaves.
+- Public-key identity verification.
 - Payment plans.
 - Multi-device conflict resolution.
 
@@ -84,7 +89,9 @@ Functional requirements:
 - Store JWT securely.
 - Require biometrics before showing vault content.
 - Create, update, and delete secure notes.
+- Create rooms, invite registered users, accept room invites, leave rooms.
 - Connect to a WebSocket room.
+- Show members and online presence.
 - Reconnect automatically after network loss.
 
 Technical requirements:
@@ -134,6 +141,8 @@ Core data model:
 User(id, email, passwordHash, createdAt)
 SecureNote(id, ownerId, title, encryptedContent, createdAt, updatedAt)
 Room(id, name, ownerId, createdAt)
+RoomMember(id, roomId, userId, role, encryptedRoomKey, joinedAt, lastSeenAt)
+RoomInvite(id, roomId, inviterId, inviteeEmail, status, createdAt, acceptedAt)
 Message(id, roomId, senderId, encryptedBody, createdAt)
 ```
 
@@ -147,7 +156,11 @@ GET /api/notes
 POST /api/notes
 DELETE /api/notes/{id}
 GET /api/rooms
-WS /ws/rooms/{roomId}
+POST /api/rooms
+POST /api/rooms/{roomId}/invites
+POST /api/rooms/invites/{inviteId}/accept
+GET /api/rooms/{roomId}/members
+WS /ws + /topic/rooms/{roomId}
 ```
 
 Example WebSocket event:
@@ -180,6 +193,8 @@ Milestone 2: Secure vault.
 Milestone 3: Realtime room.
 
 - Spring WebSocket endpoint.
+- Room membership and invite endpoints.
+- Client-generated room keys, one encrypted copy per member.
 - Android WebSocket client.
 - Connection state UI.
 - Reconnection strategy.
@@ -287,4 +302,3 @@ Future issues:
 ## Portfolio Pitch
 
 SignalVault is a secure realtime Android application built with Jetpack Compose and backed by a Spring Boot API. It demonstrates Android security, WebSocket resiliency, JWT auth, PostgreSQL persistence, Dockerized backend infrastructure, and automated testing through CI.
-

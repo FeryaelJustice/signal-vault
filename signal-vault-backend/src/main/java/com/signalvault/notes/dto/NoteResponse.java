@@ -10,6 +10,7 @@ public record NoteResponse(
         UUID ownerId,
         String title,
         String encryptedContent,
+        boolean highSecurity,
         Instant createdAt,
         Instant updatedAt
 ) {
@@ -19,6 +20,7 @@ public record NoteResponse(
                 note.getOwnerId(),
                 note.getTitle(),
                 note.getEncryptedContent(),
+                note.isHighSecurity(),
                 note.getCreatedAt(),
                 note.getUpdatedAt());
     }

@@ -2,7 +2,7 @@
 
 ## Overview
 
-Next.js 16 (App Router) frontend for SignalVault. Dark security-focused UI. Client-side encryption is the defining constraint: **the backend only sees ciphertext — encryption and decryption happen in the browser**.
+Next.js 16 (App Router) frontend for SignalVault. Dark security-focused UI. Client-side encryption is the defining constraint: **the backend only sees ciphertext — encryption and decryption happen in the browser**. Shared rooms use a random room key that is wrapped by each member's vault key.
 
 ## Stack
 
@@ -69,7 +69,9 @@ e2e/                    # Playwright e2e specs
 ### Realtime
 - `useRoomConnection` manages STOMP over SockJS with exponential backoff.
 - Status: `connecting | connected | reconnecting | disconnected` — shown in `ConnectionBadge`.
-- Messages are encrypted before sending and decrypted on receipt using the vault key.
+- Messages are encrypted before sending and decrypted on receipt using the room key.
+- Room keys are generated in the browser and stored as `encryptedRoomKey` per member.
+- Invite links carry the room key in the URL fragment; accepting an invite encrypts that key with the invitee's vault key before sending it to the backend.
 - Auth header is sent in STOMP CONNECT frame: `Authorization: Bearer <token>`.
 
 ### Routing
@@ -92,7 +94,11 @@ POST /api/notes          {title, encryptedContent} -> 201 Note
 PUT  /api/notes/:id      {title, encryptedContent} -> 200 Note
 DEL  /api/notes/:id                                -> 204
 GET  /api/rooms                                    -> 200 Room[]
-POST /api/rooms          {name}                    -> 201 Room
+POST /api/rooms          {name, encryptedRoomKey}  -> 201 Room
+GET  /api/rooms/invites                            -> 200 RoomInvite[]
+POST /api/rooms/invites/:id/accept {encryptedRoomKey} -> 200 Room
+GET  /api/rooms/:id/members                        -> 200 RoomMember[]
+POST /api/rooms/:id/invites {email}                -> 201 RoomInvite
 GET  /api/rooms/:id/messages                       -> 200 Message[]
 WS   /ws (SockJS/STOMP)
   Subscribe: /topic/rooms/:roomId

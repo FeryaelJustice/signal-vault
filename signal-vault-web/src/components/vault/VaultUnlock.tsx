@@ -1,10 +1,15 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useVaultStore } from "@/lib/vault/vaultStore";
 import { useAuth } from "@/lib/auth/AuthProvider";
+import {
+  validateVaultPassphrase,
+  VAULT_PASSPHRASE_RULES,
+} from "@/lib/vault/passphrasePolicy";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -16,19 +21,41 @@ const schema = z.object({
 type FormValues = z.infer<typeof schema>;
 
 export function VaultUnlock() {
-  const { unlock, unlocking, error } = useVaultStore();
+  const { unlock, unlocking, error, hasVerifier } = useVaultStore();
   const { user } = useAuth();
+  const [isSetup, setIsSetup] = useState(false);
 
   const {
     register,
     handleSubmit,
+    watch,
+    setError,
     formState: { errors },
   } = useForm<FormValues>({
     resolver: zodResolver(schema),
   });
 
+  const passphrase = watch("passphrase") ?? "";
+  const passphraseFailures = isSetup
+    ? validateVaultPassphrase(passphrase)
+    : [];
+
+  useEffect(() => {
+    if (!user) {
+      setIsSetup(false);
+      return;
+    }
+    setIsSetup(!hasVerifier(user.id));
+  }, [hasVerifier, user]);
+
   async function onSubmit(values: FormValues) {
     if (!user) return;
+    if (isSetup && passphraseFailures.length > 0) {
+      setError("passphrase", {
+        message: `Use a stronger vault passphrase: ${passphraseFailures.join(", ")}`,
+      });
+      return;
+    }
     await unlock(values.passphrase, user.id);
   }
 
@@ -54,10 +81,12 @@ export function VaultUnlock() {
           </div>
           <div className="text-center">
             <h1 className="text-lg font-semibold tracking-tight">
-              Unlock your vault
+              {isSetup ? "Set up your vault" : "Unlock your vault"}
             </h1>
             <p className="mt-1 text-sm text-muted-foreground">
-              Enter your vault passphrase to decrypt your notes.
+              {isSetup
+                ? "Create the passphrase that will protect your notes and rooms."
+                : "Enter your vault passphrase to decrypt your notes."}
               <br />
               This stays in memory only.
             </p>
@@ -108,6 +137,21 @@ export function VaultUnlock() {
                 {error}
               </p>
             )}
+            {isSetup && (
+              <ul className="mt-3 space-y-1 rounded-lg border border-border/60 bg-card/60 p-3 text-xs text-muted-foreground">
+                {VAULT_PASSPHRASE_RULES.map((rule) => {
+                  const missing = passphraseFailures.includes(rule);
+                  return (
+                    <li
+                      key={rule}
+                      className={missing ? "text-muted-foreground" : "text-success"}
+                    >
+                      {missing ? "[ ]" : "[x]"} {rule}
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
           </div>
 
           <Button type="submit" className="w-full" disabled={unlocking}>
@@ -117,7 +161,7 @@ export function VaultUnlock() {
                 Deriving key…
               </span>
             ) : (
-              "Unlock"
+              isSetup ? "Create vault key" : "Unlock"
             )}
           </Button>
         </form>

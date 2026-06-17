@@ -5,9 +5,10 @@ Spring Boot REST + WebSocket API for SignalVault. This file orients an agent wor
 
 ## Core security invariant
 
-**The server stores ciphertext, never plaintext.** `SecureNote.encryptedContent` and
-`Message.encryptedBody` are client-encrypted blobs. Never add server-side decryption, logging of
-those fields, or any feature that assumes the server can read note/message content.
+**The server stores ciphertext, never plaintext.** `SecureNote.encryptedContent`,
+`RoomMember.encryptedRoomKey`, and `Message.encryptedBody` are client-encrypted blobs.
+Never add server-side decryption, logging of those fields, or any feature that assumes the
+server can read note/message content or raw room keys.
 
 ## Stack
 
@@ -43,8 +44,8 @@ com.signalvault
 ├── auth        # User, RefreshToken (+ repos), AuthService (register/login/refresh/logout),
 │               #   AuthController, MeController, RefreshCookieFactory, dto/
 ├── notes       # SecureNote (+ repo), NoteService, NoteController, dto/
-├── rooms       # Room, Message (+ repos), RoomService, RoomController, dto/
-│               #   (messages live inside rooms)
+├── rooms       # Room, RoomMember, RoomInvite, Message (+ repos), RoomService,
+│               #   RoomController, dto/
 ├── security    # JwtService, JwtProperties, JwtAuthenticationFilter, SecurityConfig,
 │               #   AuthenticatedUser (principal), @CurrentUser, CORS/Cookie properties,
 │               #   RestAuthenticationEntryPoint, AccessDeniedHandlerImpl
@@ -77,7 +78,7 @@ com.signalvault
 - `POST /api/auth/logout` → 204 (clears cookie)
 - `GET /api/me` (Bearer) → 200 `{id,email,createdAt}`
 - `GET|POST /api/notes`, `PUT|DELETE /api/notes/{id}` (Bearer) — owner-scoped
-- `GET|POST /api/rooms`, `GET /api/rooms/{id}/messages` (Bearer)
+- `GET|POST /api/rooms`, invite/member/presence endpoints, `GET /api/rooms/{id}/messages` (Bearer)
 - WS `/ws` (SockJS): CONNECT needs `Authorization: Bearer <token>`; subscribe `/topic/rooms/{id}`,
   send `/app/rooms/{id}` `{encryptedBody}`; broadcast `{type:"MESSAGE_CREATED", roomId, messageId, senderId, encryptedBody, createdAt}`.
 

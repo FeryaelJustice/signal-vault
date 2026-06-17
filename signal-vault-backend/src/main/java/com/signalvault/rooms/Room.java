@@ -25,6 +25,12 @@ public class Room {
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 
+    @Column(name = "high_security", nullable = false)
+    private boolean highSecurity;
+
+    @Column(name = "password_verifier", columnDefinition = "TEXT")
+    private String passwordVerifier;
+
     protected Room() {
         // for JPA
     }
@@ -34,6 +40,7 @@ public class Room {
         this.name = name;
         this.ownerId = ownerId;
         this.createdAt = createdAt;
+        this.highSecurity = false;
     }
 
     public static Room create(String name, UUID ownerId) {
@@ -54,5 +61,21 @@ public class Room {
 
     public Instant getCreatedAt() {
         return createdAt;
+    }
+
+    public boolean isHighSecurity() {
+        return highSecurity;
+    }
+
+    public void setHighSecurity(boolean highSecurity) {
+        this.highSecurity = highSecurity;
+    }
+
+    public String getPasswordVerifier() {
+        return passwordVerifier;
+    }
+
+    public void setPasswordVerifier(String passwordVerifier) {
+        this.passwordVerifier = passwordVerifier;
     }
 }

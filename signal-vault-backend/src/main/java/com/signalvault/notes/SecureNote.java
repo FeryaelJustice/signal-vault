@@ -29,6 +29,9 @@ public class SecureNote {
     @Column(name = "encrypted_content", nullable = false, columnDefinition = "TEXT")
     private String encryptedContent;
 
+    @Column(name = "high_security", nullable = false)
+    private boolean highSecurity;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 
@@ -39,23 +42,26 @@ public class SecureNote {
         // for JPA
     }
 
-    public SecureNote(UUID id, UUID ownerId, String title, String encryptedContent, Instant createdAt, Instant updatedAt) {
+    public SecureNote(UUID id, UUID ownerId, String title, String encryptedContent,
+                      boolean highSecurity, Instant createdAt, Instant updatedAt) {
         this.id = id;
         this.ownerId = ownerId;
         this.title = title;
         this.encryptedContent = encryptedContent;
+        this.highSecurity = highSecurity;
         this.createdAt = createdAt;
         this.updatedAt = updatedAt;
     }
 
-    public static SecureNote create(UUID ownerId, String title, String encryptedContent) {
+    public static SecureNote create(UUID ownerId, String title, String encryptedContent, boolean highSecurity) {
         Instant now = Instant.now();
-        return new SecureNote(UUID.randomUUID(), ownerId, title, encryptedContent, now, now);
+        return new SecureNote(UUID.randomUUID(), ownerId, title, encryptedContent, highSecurity, now, now);
     }
 
-    public void update(String title, String encryptedContent) {
+    public void update(String title, String encryptedContent, boolean highSecurity) {
         this.title = title;
         this.encryptedContent = encryptedContent;
+        this.highSecurity = highSecurity;
         this.updatedAt = Instant.now();
     }
 
@@ -73,6 +79,10 @@ public class SecureNote {
 
     public String getEncryptedContent() {
         return encryptedContent;
+    }
+
+    public boolean isHighSecurity() {
+        return highSecurity;
     }
 
     public Instant getCreatedAt() {

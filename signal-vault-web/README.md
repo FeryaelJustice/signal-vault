@@ -1,6 +1,8 @@
 # SignalVault Web
 
-A Next.js frontend for SignalVault — secure encrypted notes and private realtime messaging. Encryption happens entirely in the browser; the backend only ever stores and transmits ciphertext.
+A Next.js frontend for SignalVault — secure encrypted notes and shared private realtime
+rooms. Encryption happens entirely in the browser; the backend only ever stores and
+transmits ciphertext or per-member encrypted room keys.
 
 ## Stack
 
@@ -92,7 +94,8 @@ pnpm e2e
 - **Access token** — stored in JavaScript memory only (never `localStorage` or `sessionStorage`). Clears on page reload.
 - **Refresh token** — managed by the backend as an HttpOnly cookie. Not accessible from JavaScript.
 - **Vault passphrase** — never sent to the server. Used only to derive an AES-GCM-256 key via PBKDF2 (250,000 iterations).
-- **Encrypted content** — all note text and room messages are encrypted before transmission. The backend stores ciphertext only.
+- **Encrypted content** — all note text and room messages are encrypted before transmission. Shared rooms use a random room key; each member stores that room key encrypted with their vault key. The backend stores ciphertext only.
+- **Invites** — owners invite by email and copy an invite link. The room key is placed in the URL fragment (`#roomKey=...`), so it is not sent to the backend; the invitee encrypts it with their vault key when accepting.
 
 ## Architecture
 

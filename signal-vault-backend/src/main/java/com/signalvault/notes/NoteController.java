@@ -49,7 +49,7 @@ public class NoteController {
     public NoteResponse create(@CurrentUser AuthenticatedUser user,
                                @Valid @RequestBody NoteRequest request) {
         return NoteResponse.from(
-                noteService.create(user.id(), request.title(), request.encryptedContent()));
+                noteService.create(user.id(), request.title(), request.encryptedContent(), request.highSecurity()));
     }
 
     @Operation(summary = "Update a note (must be owned by the caller)")
@@ -58,7 +58,7 @@ public class NoteController {
                                @PathVariable UUID id,
                                @Valid @RequestBody NoteRequest request) {
         return NoteResponse.from(
-                noteService.update(user.id(), id, request.title(), request.encryptedContent()));
+                noteService.update(user.id(), id, request.title(), request.encryptedContent(), request.highSecurity()));
     }
 
     @Operation(summary = "Delete a note (must be owned by the caller)")
