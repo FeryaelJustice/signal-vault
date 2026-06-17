@@ -75,7 +75,7 @@ export interface RoomInvite {
   inviterId: string;
   inviterEmail: string;
   inviteeEmail: string;
-  status: "PENDING" | "ACCEPTED" | "REVOKED";
+  status: "PENDING" | "ACCEPTED" | "REJECTED" | "REVOKED";
   createdAt: string;
   acceptedAt: string | null;
 }

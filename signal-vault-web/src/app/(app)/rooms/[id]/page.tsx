@@ -5,7 +5,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
-import { apiAcceptInvite, apiGetRooms } from "@/lib/api/client";
+import { apiAcceptInvite, apiGetRooms, apiRejectInvite } from "@/lib/api/client";
 import { RoomView } from "@/components/rooms/RoomView";
 import { useVaultStore } from "@/lib/vault/vaultStore";
 import { VaultUnlock } from "@/components/vault/VaultUnlock";
@@ -59,6 +59,21 @@ export default function RoomPage({ params }: RoomPageProps) {
     },
   });
 
+  const rejectMutation = useMutation({
+    mutationFn: () => {
+      if (!inviteId) throw new Error("Invite missing");
+      return apiRejectInvite(inviteId);
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["room-invites", "pending"] });
+      toast.info("Invite declined");
+      router.replace("/rooms");
+    },
+    onError: (err) => {
+      toast.error(err instanceof Error ? err.message : "Failed to decline invite");
+    },
+  });
+
   if (isLoading) {
     return (
       <div className="flex h-[calc(100vh-3.5rem)] items-center justify-center">
@@ -84,13 +99,22 @@ export default function RoomPage({ params }: RoomPageProps) {
                 <VaultUnlock />
               </div>
             ) : (
-              <Button
-                className="mt-5"
-                onClick={() => acceptMutation.mutate()}
-                disabled={acceptMutation.isPending}
-              >
-                {acceptMutation.isPending ? "Accepting…" : "Accept invite"}
-              </Button>
+              <div className="mt-5 flex gap-3">
+                <Button
+                  onClick={() => acceptMutation.mutate()}
+                  disabled={acceptMutation.isPending || rejectMutation.isPending}
+                >
+                  {acceptMutation.isPending ? "Accepting…" : "Accept invite"}
+                </Button>
+                <Button
+                  variant="outline"
+                  className="text-destructive hover:text-destructive"
+                  onClick={() => rejectMutation.mutate()}
+                  disabled={acceptMutation.isPending || rejectMutation.isPending}
+                >
+                  {rejectMutation.isPending ? "Declining…" : "Decline"}
+                </Button>
+              </div>
             )}
           </div>
         </div>

@@ -10,6 +10,7 @@ import {
   apiGetRooms,
   apiCreateRoom,
   apiCreatePasswordProposal,
+  apiRejectInvite,
 } from "@/lib/api/client";
 import type { Room } from "@/lib/api/contract";
 import { formatDistanceToNow } from "@/lib/utils/date";
@@ -46,6 +47,16 @@ export default function RoomsPage() {
   const { data: pendingInvites } = useQuery({
     queryKey: ["room-invites", "pending"],
     queryFn: apiGetPendingInvites,
+  });
+
+  const rejectInviteMutation = useMutation({
+    mutationFn: (inviteId: string) => apiRejectInvite(inviteId),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["room-invites", "pending"] });
+      toast.info("Invite declined");
+    },
+    onError: (err) =>
+      toast.error(err instanceof Error ? err.message : "Failed to decline invite"),
   });
 
   const createMutation = useMutation({
@@ -160,9 +171,15 @@ export default function RoomsPage() {
                     Invited by {invite.inviterEmail}
                   </p>
                 </div>
-                <span className="text-right text-xs text-muted-foreground">
-                  Use the invite link
-                </span>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-xs text-destructive hover:text-destructive shrink-0"
+                  onClick={() => rejectInviteMutation.mutate(invite.id)}
+                  disabled={rejectInviteMutation.isPending}
+                >
+                  Decline
+                </Button>
               </li>
             ))}
           </ul>

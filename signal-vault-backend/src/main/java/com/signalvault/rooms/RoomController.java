@@ -86,6 +86,14 @@ public class RoomController {
                 roomService.onlineCount(room.getId()));
     }
 
+    @Operation(summary = "Reject a room invite")
+    @PostMapping("/invites/{inviteId}/reject")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void rejectInvite(@CurrentUser AuthenticatedUser user,
+                              @PathVariable UUID inviteId) {
+        roomService.rejectInvite(user.id(), user.email(), inviteId);
+    }
+
     @Operation(summary = "Create a room")
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)

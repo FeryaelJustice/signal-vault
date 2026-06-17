@@ -231,6 +231,12 @@ export async function apiAcceptInvite(
   });
 }
 
+export async function apiRejectInvite(inviteId: string): Promise<void> {
+  return apiFetch<void>(`/api/rooms/invites/${inviteId}/reject`, {
+    method: "POST",
+  });
+}
+
 export async function apiTouchRoomPresence(roomId: string): Promise<void> {
   return apiFetch<void>(`/api/rooms/${roomId}/presence`, { method: "POST" });
 }

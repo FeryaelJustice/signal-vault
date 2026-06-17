@@ -89,4 +89,8 @@ public class RoomInvite {
         this.status = RoomInviteStatus.ACCEPTED;
         this.acceptedAt = Instant.now();
     }
+
+    public void reject() {
+        this.status = RoomInviteStatus.REJECTED;
+    }
 }

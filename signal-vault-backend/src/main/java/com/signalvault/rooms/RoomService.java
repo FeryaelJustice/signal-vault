@@ -182,6 +182,18 @@ public class RoomService {
     }
 
     @Transactional
+    public RoomInvite rejectInvite(UUID userId, String userEmail, UUID inviteId) {
+        RoomInvite invite = roomInviteRepository.findById(inviteId)
+                .orElseThrow(() -> new NotFoundException("Invite not found"));
+        if (invite.getStatus() != RoomInviteStatus.PENDING
+                || !invite.getInviteeEmail().equalsIgnoreCase(userEmail)) {
+            throw new NotFoundException("Invite not found");
+        }
+        invite.reject();
+        return roomInviteRepository.save(invite);
+    }
+
+    @Transactional
     public void leave(UUID userId, UUID roomId) {
         RoomMember member = requireMember(userId, roomId);
         if (member.getRole() == RoomRole.OWNER) {
@@ -210,6 +222,9 @@ public class RoomService {
             throw new ConflictException("Create a room password proposal first before enabling high security");
         }
         room.setHighSecurity(highSecurity);
+        if (!highSecurity) {
+            room.setPasswordVerifier(null);
+        }
         return roomRepository.save(room);
     }
 
